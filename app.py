@@ -2,6 +2,7 @@ import boto3
 import botocore.config
 import json
 from datetime import datetime
+import traceback
 
 def blog_generation(topic:str) -> str:
     prompt = f"""<s>[INST]Human: Write a 250 word blog on the topic {topic}
@@ -9,7 +10,6 @@ def blog_generation(topic:str) -> str:
     """ 
     body = {
         "prompt": prompt,
-        "max_new_tokens": 512,
         "top_p": 0.9,
         "temperature":0.6
     }
@@ -17,16 +17,26 @@ def blog_generation(topic:str) -> str:
     try:
         bedrock = boto3.client("bedrock-runtime", region_name="us-east-1",
                              config=botocore.config.Config(read_timeout=300, retries={'max_attempts':3}))
-        response = bedrock.invoke_model(body=json.dumps(body), modelId="meta.llama3-2-1b-instruct-v1:0")
-        response_content = response.get('body').read()
+        
+        model_id = "arn:aws:bedrock:us-east-1:XXXXXXXXXXXX:inference-profile/us.meta.llama3-2-1b-instruct-v1:0"
+        response = bedrock.invoke_model(
+            body=json.dumps(body), 
+            modelId=model_id,
+            accept="application/json",
+            contentType="application/json"
+        )
+        response_content = response.get('body').read().decode('utf-8')
         response_data = json.loads(response_content)
         print(response_data)
-        
-        blog_details = response_data['generation']
+        if 'outputs' in response_data and len(response_data['outputs']) > 0:
+            blog_details = response_data['outputs'][0]['text']
+        else:
+            blog_details = "No response generated."
         return blog_details
     
     except Exception as e:
-        print(f"Error generating the blog:{e}")
+        print(f"Error generating the blog for topic '{topic}': {str(e)}")
+        print(traceback.format_exc())  # Logs full error details
         return ""
     
 def save_blog_s3(s3_key, s3_bucket, generate_blog):
@@ -40,7 +50,7 @@ def save_blog_s3(s3_key, s3_bucket, generate_blog):
 
 def lambda_handler(event, context):
     event = json.loads(event['body'])
-    blogtopic = event['blog_topic']
+    blogtopic = event['topic']
     generate_blog = blog_generation(topic=blogtopic)
 
     if generate_blog:
