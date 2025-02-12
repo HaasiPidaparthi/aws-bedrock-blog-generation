@@ -19,7 +19,7 @@ This project enables AI-powered blog generation using AWS Bedrock, AWS Lambda, A
 3. **AWS Lambda**: Processes the request, calls AWS Bedrock, and generates structured blog content.
 4. **AWS Bedrock**: Uses Llama 3 to generate the blog based on the provided parameters.
 5. **AWS S3**: Stores the generated blog in a structured format.
-6. **Response**: The API responds with a success message, blog content, and the S3 file location.
+6. **Response**: The API responds with a success message and posts the blog content on the web UI.
 
 ## 📸 Sample Output
 ![streamlit sample output](https://github.com/HaasiPidaparthi/aws-bedrock-blog-generation/blob/main/sample_output.png)
